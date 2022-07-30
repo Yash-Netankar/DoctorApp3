@@ -49,7 +49,7 @@ authRouter.post("/login", async(req,res)=>{
         const sql = "select * from users where email = ?";
         con.query(sql, [[email]], async function(err,result){
             if(err){
-                return res.status(400).json({ success: false, msg: "Internal Error Occurred" });
+                return res.status(400).json({ success: false, msg: "Internal Error Occurred", err });
             }
 
             else if(result.length>0)
@@ -66,7 +66,7 @@ authRouter.post("/login", async(req,res)=>{
 
                     await jwt.sign({uid:result[0].uid, role:result[0].role}, SECRET, function(err, token){
                         if(err)
-                            return res.json({ success: false, msg: "Internal Error Occurred" });
+                            return res.json({ success: false, msg: "Internal Error Occurred", err });
                         else
                         {
                             // check if doctor is checked in to update timings to the patients

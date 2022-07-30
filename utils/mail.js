@@ -20,13 +20,13 @@ export const Mail = async (email, status)=>{
     try {
         await transporter.sendMail({
             from:process.env.EMAIL,
-            to:"wonaci7996@richdn.com",
+            to:`${email}`,
             subject:`Appointment ${status}`,
             html:`
             <p>Dear user,</p><br/>
             <p>Your Appointment has been <strong>${status}</strong>.</p><br/>.`
         })
-    } 
+    }
     catch (error)
     {
         console.log(error)

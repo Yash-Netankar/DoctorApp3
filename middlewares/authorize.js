@@ -50,7 +50,7 @@ export const authorizeAdmin = async(req, res, next)=>{
             con.query(sql, [[uid],[role]], function(err, result){
                 if(err)
                     return res.json({msg:"Unexpected Internal Server Error Occurred", success:false})
-
+                
                 else if(result.length>0)
                 {
                     req.user=result[0];
@@ -89,7 +89,7 @@ export const authorizeDoctor = async(req, res, next)=>{
             con.query(sql, [[uid],[role]], function(err, result){
                 if(err)
                     return res.json({msg:"Unexpected Internal Server Error Occurred", success:false})
-
+                
                 else if(result.length>0)
                 {
                     req.user=result[0];

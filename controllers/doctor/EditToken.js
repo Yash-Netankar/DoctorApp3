@@ -3,7 +3,7 @@ import { getCurrentDate } from "../../utils/calendar.js";
 const EditToken = async(req, res, con) => {
     const {email, id, token, slot, appDate} = req.body;
     // check if token is already present
-    const date =  await getCurrentDate();
+    const date = await getCurrentDate();
     if(date === appDate)
     {
         const sql = "select token from appointments where (slot=? && appointmentDate=?) && token = ?"

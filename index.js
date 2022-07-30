@@ -34,8 +34,10 @@ const io = new Server(server,{
 });
 
 let onlineDoctors = {};
+let onlineUsers = {};
 
 io.on('connection', async(socket) => {
+    // for doctors
     socket.on("doctor-connected", ({status, id}) => {
         if(status==1){
             if(!Object.values(onlineDoctors).includes(id)) onlineDoctors[socket.id] = id
@@ -43,13 +45,46 @@ io.on('connection', async(socket) => {
         else delete onlineDoctors[socket.id]
         socket.broadcast.emit("getDocStatus", onlineDoctors)
     })
-
+    
     socket.on("initial-status", () => {
         socket.emit("doc-initial-status", onlineDoctors)
     })
 
+    // -------------------------------------------------------------------------------------
+    
+    socket.on("user-connected", ({status, id}) => {
+        if(status==1){
+            if(!Object.values(onlineUsers).includes(id)) onlineUsers[socket.id] = id
+        }
+        else delete onlineUsers[socket.id]
+      
+        if(onlineUsers.length<=0){
+            socket.broadcast.emit("OnlineUsers", {success: false, msg:"No Users are online"})
+        }
+        else{
+            if(onlineDoctors.length<=0){
+                socket.broadcast.emit("OnlineUsers", {success: false, msg:"Please go online to check status of users"})
+            }
+            else{
+                Object.keys(onlineDoctors).map(socketID => {
+                    io.to(socketID).emit("OnlineUsers", {success: true, msg:`${onlineUsers?.length} patients are online`, data:onlineUsers})
+                })
+            }
+        }
+    })
+
+    socket.on("user-initial-status", () => {
+        Object.keys(onlineDoctors).length>0 && Object.keys(onlineDoctors).map(id => {
+            io.to(id).emit("OnlineUsers", onlineUsers)
+        })
+    })
+
+    // ----------------------------------------------------------------------------------------------
+
     socket.on("disconnect", () => {
-        delete onlineDoctors[socket.id]
+        onlineDoctors[socket.id] && delete onlineDoctors[socket.id];
+        onlineUsers[socket.id]   && delete onlineUsers[socket.id];
+
         socket.broadcast.emit("getDocStatus", onlineDoctors)
     })
 })

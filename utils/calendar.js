@@ -35,7 +35,7 @@ const getCurrentTime = async(time)=>{
     try {
         const res = await axios.get("https://timeapi.io/api/Time/current/zone?timeZone=Asia/kolkata");
         // const d = new Date(res.data.datetime)
-        
+    
         let hr = res.data.hour;
         let min = res.data.minute;
 
