@@ -23,6 +23,34 @@ userRouter.get("/getDoctors", authorizeUser, (req, res) => {
 
 
 
+//GET DOCTOR DETAILS
+userRouter.post("/getDoctorDetails", authorizeUser, (req, res)=>{
+    const {doctorID} = req.body;
+
+    if(doctorID){
+        try {
+            const sql = "select d.name, d.location, d.speciality, d.timings, d.slots, u.phone, u.email from doctors as d inner join users as u where d.did=? and u.uid=?";
+
+            con.query(sql,[[doctorID], [doctorID]], function(err, result){
+                if(err){
+                    return res.json({success:false, msg:"Internal Server Error Occurred"})
+                }
+                else if(result.length>0){
+                    return res.json({success:true, data:result})
+                }
+                else{
+                    return res.json({success:false, msg:"This doctor is not available"})
+                }
+            })
+        } 
+        catch (error) {
+            return res.json({success:false, msg:"Internal Server Error Occurred"})
+        }
+    }
+})
+
+
+
 //Get all of my appointments
 userRouter.get("/getAllMyAppointments", authorizeUser, async (req, res) => {
     const sql = "select * from appointments where pemail = ?";
@@ -40,7 +68,8 @@ userRouter.get("/getAllMyAppointments", authorizeUser, async (req, res) => {
 });
 
 
-// get today appointments
+
+// GET TODAY'S APPOINTMENTS
 userRouter.get("/getTodayAppointments", authorizeUser, async (req, res) => {
     const sql = "select * from appointments where pemail = ? and appointmentDate = ?";
     const date = await getCurrentDate();
@@ -160,12 +189,12 @@ userRouter.post("/updatePassword", authorizeUser, async (req, res) => {
 })
 
 
-// ************GET ESTIMATE APPOINTMENT TIMING FOR USER******************
+
+// ************GET ESTIMATE APPOINTMENT TIMINGS & QUEUE FOR USER******************
 userRouter.post("/getAppointmentTimings", authorizeUser, async (req, res) => {
     const { slot } = req.body;
 
     if (slot) {
-        // const userAllAppSql = "select * from appointments where pemail = ? and appointmentDate = ? and slot = ?";
         const AllAppSql =
             "select * from appointments where appointmentDate = ? and slot = ? and (status = 0 or status = 1)";
 
@@ -175,11 +204,30 @@ userRouter.post("/getAppointmentTimings", authorizeUser, async (req, res) => {
 
         let doctorIDsArr = [];
         let newAppointmentsArr = [];
+        let hours;
+        let minutes;
 
-        let hours = slot == "morning" ? 11 : 7;
-        let minutes = slot == "morning" ? 0 : 30;
+        // getting doctor info
+        try {
+            const doctorSql = "select did, timings from doctors";
+            con.query(doctorSql, function (err, result) {
+                if (err) return res.json({ success: false, msg: "Unexpected error occurred" })
+                doctorIDsArr = result.length > 0 && result.map(obj => obj?.did);
 
-        if (slot == "morning" || slot == "evening") {
+                let timings = JSON.parse(result[0]?.timings);
+                if (Object.keys(timings).includes(slot)) {
+                    let doctorStartTime = timings[slot]?.split(",")[0]
+                    doctorStartTime = doctorStartTime.split(".");
+                    hours = parseInt(doctorStartTime[0]);
+                    minutes = parseInt(doctorStartTime[1]);
+                }
+            })
+        }
+        catch (error) {
+            return res.json({ success: false, msg: "Unexpected Error Occurred while fetching timings" });
+        }
+
+        if (["morningA","morningB","eveningA","eveningB"].includes(slot)) {
             if (time.hours >= hours) {
                 hours = time.hours
                 minutes = time.minutes
@@ -187,12 +235,6 @@ userRouter.post("/getAppointmentTimings", authorizeUser, async (req, res) => {
         }
 
         try {
-            const doctorIdSql = "select did from doctors";
-            con.query(doctorIdSql, function (err, result) {
-                if (err) return res.json({ success: false, msg: "Unexpected error occurred" })
-                doctorIDsArr = result.length > 0 && result.map(obj => obj?.did);
-            })
-
             con.query(AllAppSql, [[date], [slot]], async function (err, AllAppointmentsToday) {
                 if (err) return res.json({ success: false, msg: "Unexpected error occurred" })
                 else if (AllAppointmentsToday.length > 0) {
@@ -207,14 +249,17 @@ userRouter.post("/getAppointmentTimings", authorizeUser, async (req, res) => {
                         })
                     })
 
-                    // timing logic
-                    newAppointmentsArr.map(doctorArr => {
+                    // timing & queue logic
+                    newAppointmentsArr.map(individualDoctorApptArr => {
                         let updated_minutes = minutes;
                         let updated_hours = hours;
+                        let queueCount = 0; // separate queue count for appointments of every doctor
 
-                        doctorArr.map((app, i) => {
+                        individualDoctorApptArr.map((app, i) => {
 
                             let estimated_time = 0;
+                            queueCount++;
+
                             if (app[i - 1]?.appointmentType === 'normal' && i != 0)
                                 estimated_time = 10;
                             else if (app[i - 1]?.appointmentType === 'emergency' && i != 0)
@@ -235,13 +280,13 @@ userRouter.post("/getAppointmentTimings", authorizeUser, async (req, res) => {
                             let min = updated_minutes <= 9 ? `0${updated_minutes}` : updated_minutes;
                             let time = `${hr}:${min}`
 
-                            app = { ...app, time };
+                            app = { ...app, time, queue:queueCount };
 
-                            if (app.pemail == email) //pushing only particular user apps
+                            if (app.pemail == email) //pushing only particular user appts.
                                 newAppArrWithTimings.push(app);
                         })
                     })
-
+                    
                     return res.json({ success: true, newAppArrWithTimings })
                 }
                 else return res.json({ success: false, msg: "No Appointments Found" })
@@ -303,6 +348,32 @@ userRouter.post("/bookAppointment", authorizeUser, async (req, res) => {
     }
     else return res.json({ success: false, msg: "Invalid Details" });
 });
+
+
+
+// DELETE AN APPOINTMENT
+userRouter.post("/deleteAppointment", authorizeUser, async(req, res) => {
+    const {aid} = req.body
+    try {
+        if(aid){
+            const sql = "delete from appointments where id = ?"
+            con.query(sql, [[aid]], async function(err, result){
+                if(err){
+                    return res.status(500).json({msg:"Appointment deletion failed", success:false, err})
+                }
+                else if(result?.affectedRows){
+                    return res.json({msg:"Appointment deleted succecssfully", success:true})
+                }
+                else {
+                    return res.status(503).json({msg:"Appointment deletion failed", success:false})
+                }
+            })
+        }
+    }
+    catch (error) {
+        return res.status(500).json({msg:"Internal server error occurred", success:false})
+    }
+})
 
 
 
