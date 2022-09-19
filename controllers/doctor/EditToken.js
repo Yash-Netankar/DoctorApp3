@@ -1,5 +1,6 @@
 import { getCurrentDate } from "../../utils/calendar.js";
 
+// EDIT TOKEN
 const EditToken = async(req, res, con) => {
     const {email, id, token, slot, appDate} = req.body;
     // check if token is already present

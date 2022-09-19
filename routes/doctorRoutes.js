@@ -1,9 +1,39 @@
 import express from "express";
-import { EditToken } from "../controllers/doctor/EditToken.js";
+import {EditToken} from "../controllers/doctor/EditToken.js";
+import { UpdateBasicDetails, UpdateSettings } from "../controllers/doctor/UpdateDetails.js";
 import { authorizeDoctor } from "../middlewares/authorize.js";
 import con from "../models/db.js";
 import { getCurrentDate } from "../utils/calendar.js";
 const doctorRouter =  express.Router();
+
+
+doctorRouter.post("/getDoctorDetails", authorizeDoctor, async(req, res) => {
+    const doctorID = req.doctorID;
+
+    if(doctorID){
+        try {
+            const sql = "select d.did, d.name, d.location, d.speciality, d.timings, d.slots, d.slotsValidity ,u.phone, u.email from doctors as d inner join users as u where d.did=? and u.uid=?";
+
+            con.query(sql,[[doctorID], [doctorID]], function(err, result){
+                if(err){
+                    return res.json({success:false, msg:"Internal Server Error Occurred"})
+                }
+                else if(result.length>0){
+                    return res.json({success:true, data:result})
+                }
+                else{
+                    return res.json({success:false, msg:"Your details are not available"})
+                }
+            })
+        } 
+        catch (error) {
+            return res.json({success:false, msg:"Internal Server Error Occurred"})
+        }
+    }
+    else{
+        return res.json({success:false, msg:"No details found. Please try again after some time"})
+    }
+})
 
 
 doctorRouter.post("/getTodayAppointments", authorizeDoctor, async(req, res)=>{
@@ -17,7 +47,7 @@ doctorRouter.post("/getTodayAppointments", authorizeDoctor, async(req, res)=>{
       else if(result.length>0){
         return res.status(200).json({success:true, data:result})
       }
-      else return res.json({ success: false, msg: "No Appointments Found" });
+      else return res.json({ success: false, msg: "No Appointments Found Today" });
    })
 })
 
@@ -86,6 +116,30 @@ doctorRouter.post("/operation", authorizeDoctor , (req,res)=>{
 
 doctorRouter.patch("/editToken", authorizeDoctor , async(req, res)=>{
    EditToken(req, res, con);
+})
+
+
+doctorRouter.patch("/updateDoctorDetails", authorizeDoctor, async(req, res) => {
+    const {did} = req.body.data
+    switch (req.body.type) {
+        case "basic":
+            const {name, email, phone, speciality } = req.body.data
+            UpdateBasicDetails(did, name, email, phone, speciality, con, res)
+            break;
+
+        case "settings":
+            const {slots, timings, location, slotsValidity} = req.body.data
+            UpdateSettings(did, slots, timings, location, slotsValidity, con, res)
+            break;
+
+        case "privacy":
+            const { pass, oldPass } = req.body.data
+            UpdatePassword(pass, oldPass, con, res)
+            break;
+
+        default:
+            break;
+    }
 })
 
 export default doctorRouter;

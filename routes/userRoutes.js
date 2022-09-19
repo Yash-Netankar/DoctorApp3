@@ -47,6 +47,9 @@ userRouter.post("/getDoctorDetails", authorizeUser, (req, res)=>{
             return res.json({success:false, msg:"Internal Server Error Occurred"})
         }
     }
+    else{
+        return res.json({success:false, msg:"No details found. Please try again after some time"})
+    }
 })
 
 
@@ -206,18 +209,22 @@ userRouter.post("/getAppointmentTimings", authorizeUser, async (req, res) => {
         let newAppointmentsArr = [];
         let hours;
         let minutes;
+        let slotsArr = [];
 
         // getting doctor info
         try {
-            const doctorSql = "select did, timings from doctors";
+            const doctorSql = "select did, timings, slots from doctors";
             con.query(doctorSql, function (err, result) {
                 if (err) return res.json({ success: false, msg: "Unexpected error occurred" })
+                
+                slotsArr = result[0]?.slots.split(",");
                 doctorIDsArr = result.length > 0 && result.map(obj => obj?.did);
 
                 let timings = JSON.parse(result[0]?.timings);
-                if (Object.keys(timings).includes(slot)) {
+                if (Object.keys(timings).includes(slot)) 
+                {
                     let doctorStartTime = timings[slot]?.split(",")[0]
-                    doctorStartTime = doctorStartTime.split(".");
+                    doctorStartTime = doctorStartTime.split(":");
                     hours = parseInt(doctorStartTime[0]);
                     minutes = parseInt(doctorStartTime[1]);
                 }
@@ -227,7 +234,7 @@ userRouter.post("/getAppointmentTimings", authorizeUser, async (req, res) => {
             return res.json({ success: false, msg: "Unexpected Error Occurred while fetching timings" });
         }
 
-        if (["morningA","morningB","eveningA","eveningB"].includes(slot)) {
+        if (slotsArr.includes(slot)) {
             if (time.hours >= hours) {
                 hours = time.hours
                 minutes = time.minutes
