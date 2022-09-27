@@ -114,6 +114,7 @@ userRouter.get("/getAppointments", authorizeUser, async (req, res) => {
 });
 
 
+
 //GET USER DETAILS
 userRouter.get("/getUserDetails", authorizeUser, async (req, res) => {
     const sql = "select name, email, phone from users where uid = ?"
@@ -333,27 +334,46 @@ userRouter.post("/bookAppointment", authorizeUser, async (req, res) => {
 
     const doctorID = req.body.id;
     const currentDate = await getCurrentDate(date);
+    let slotsArr = [];
 
-    if (pname, req.user?.email, phone, slot, AppointmentType, doctorID, currentDate) {
-        switch (AppointmentType) {
-            case "emergency":
-                bookEmergencyAppointment(req, res, currentDate, pname, req.user.email, phone, slot, doctorID, location);
-                break;
+     // getting doctor info
+     try {
+        const doctorSql = "select slots from doctors where did = ?";
+        con.query(doctorSql, [[doctorID]], function (err, result) {
+            if (err) return res.json({ success: false, msg: "Error finding the doctor" })
+            
+            slotsArr = result[0]?.slots.split(",");
 
-            case "normal":
-                bookNormalAppointment(req, res, currentDate, pname, req.user.email, phone, slot, doctorID, "normal", location);
-                break;
-
-            case "vaccination":
-                bookNormalAppointment(req, res, currentDate, pname, req.user.email, phone, slot, doctorID, "vaccination", location);
-                //passing type as vaccination but will be considered as normal, i.e passing in normalAppointment function as of now because normal and vaccination are same
-                break;
-
-            default:
-                return res.json({ success: false, msg: "Invalid Appointment" });
-        }
+            if (pname, req.user?.email, phone, slot, AppointmentType, doctorID, currentDate, slotsArr) {
+                // checking if the slot is valid as created by the doctor
+                if(!slotsArr.includes(slot)){
+                    return res.json({ success: false, msg: "Invalid slot selected" })
+                }
+    
+                switch (AppointmentType) {
+                    case "emergency":
+                        bookEmergencyAppointment(req, res, currentDate, pname, req.user.email, phone, slot, doctorID, location, slotsArr);
+                        break;
+        
+                    case "normal":
+                        bookNormalAppointment(req, res, currentDate, pname, req.user.email, phone, slot, doctorID, "normal", location, slotsArr);
+                        break;
+        
+                    case "vaccination":
+                        bookNormalAppointment(req, res, currentDate, pname, req.user.email, phone, slot, doctorID, "vaccination", location, slotsArr);
+                        //passing type as vaccination but will be considered as normal, i.e passing in normalAppointment function as of now because normal and vaccination are same
+                        break;
+        
+                    default:
+                        return res.json({ success: false, msg: "Invalid Appointment Selected" });
+                }
+            }
+            else return res.json({ success: false, msg: "Invalid Details" });
+        });
     }
-    else return res.json({ success: false, msg: "Invalid Details" });
+    catch (error) {
+        return res.json({ success: false, msg: "Unexpected Error Occurred while booking appointments" });
+    }
 });
 
 

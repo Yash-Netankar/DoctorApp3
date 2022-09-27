@@ -12,7 +12,7 @@ doctorRouter.post("/getDoctorDetails", authorizeDoctor, async(req, res) => {
 
     if(doctorID){
         try {
-            const sql = "select d.did, d.name, d.location, d.speciality, d.timings, d.slots, d.slotsValidity ,u.phone, u.email from doctors as d inner join users as u where d.did=? and u.uid=?";
+            const sql = "select d.did, d.name, d.location, d.speciality, d.timings, d.slots ,u.phone, u.email from doctors as d inner join users as u where d.did=? and u.uid=?";
 
             con.query(sql,[[doctorID], [doctorID]], function(err, result){
                 if(err){
@@ -36,20 +36,28 @@ doctorRouter.post("/getDoctorDetails", authorizeDoctor, async(req, res) => {
 })
 
 
-doctorRouter.post("/getTodayAppointments", authorizeDoctor, async(req, res)=>{
-   const {slot} = req.body; 
-   const date = await getCurrentDate();
-   const sql = "select * from appointments where slot = ? && appointmentDate = ? && doctorID = ?";
 
-   slot &&
-   con.query(sql, [[slot], [date], [req?.doctorID]], (err, result)=>{
-      if(err) return res.json({success:false, msg:"Unexpected error occurred", err})
-      else if(result.length>0){
-        return res.status(200).json({success:true, data:result})
-      }
-      else return res.json({ success: false, msg: "No Appointments Found Today" });
-   })
+doctorRouter.post("/getTodayAppointments", authorizeDoctor, async(req, res)=>{
+//    const {slot} = req.body; 
+   const date = await getCurrentDate();
+   const sql = `select a.*, d.timings from appointments a left join doctors d on a.doctorID=d.did where a.appointmentDate = ? && a.doctorID = ?`;
+
+    // if(!slot) return res.json({ success: false, msg: "Invalid Slot", err })
+
+    try {
+        con.query(sql, [[date], [req?.doctorID]], (err, result) => {
+            if (err) return res.json({ success: false, msg: "Unexpected error occurred", err })
+            else if (result.length > 0) {
+                return res.status(200).json({ success: true, data: result })
+            }
+            else return res.json({ success: false, msg: "No Appointments Found Today" });
+        })
+    }
+    catch (error) {
+        return res.json({ success: false, msg: "Internal error occurred" })
+    }
 })
+
 
 
 doctorRouter.get("/getAppointments", authorizeDoctor ,(req,res)=>{
@@ -119,6 +127,7 @@ doctorRouter.patch("/editToken", authorizeDoctor , async(req, res)=>{
 })
 
 
+
 doctorRouter.patch("/updateDoctorDetails", authorizeDoctor, async(req, res) => {
     const {did} = req.body.data
     switch (req.body.type) {
@@ -128,8 +137,8 @@ doctorRouter.patch("/updateDoctorDetails", authorizeDoctor, async(req, res) => {
             break;
 
         case "settings":
-            const {slots, timings, location, slotsValidity} = req.body.data
-            UpdateSettings(did, slots, timings, location, slotsValidity, con, res)
+            const {slots, timings, location} = req.body.data
+            UpdateSettings(did, slots, timings, location, con, res)
             break;
 
         case "privacy":

@@ -7,6 +7,7 @@ const UpdateBasicDetails = (id, name, email, phone, speciality, con, res) => {
     {
         con.query(sql, values, (err, result) => {
             if(err){
+                console.log(err)
                 return res.json({success:false, msg:"Internal Server Error Occurred"})
             }
             else if(result.changedRows>0){
@@ -24,9 +25,9 @@ const UpdateBasicDetails = (id, name, email, phone, speciality, con, res) => {
 
 
 // EDIT SETTINGS
-const UpdateSettings = (id, slots, timings, location, slotsValidity, con, res) => {
-    const sql = `update doctors set timings = ?, slots = ?, location = ?, slotsValidity = ? where did = ?`;
-    const values = [[timings], [slots], [location], [slotsValidity], [id]];
+const UpdateSettings = (id, slots, timings, location, con, res) => {
+    const sql = `update doctors set timings = ?, slots = ?, location = ? where did = ?`;
+    const values = [[timings], [slots], [location], [id]];
     try
     {
         con.query(sql, values, (err, result) => {
