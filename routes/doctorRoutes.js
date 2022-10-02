@@ -12,7 +12,7 @@ doctorRouter.post("/getDoctorDetails", authorizeDoctor, async(req, res) => {
 
     if(doctorID){
         try {
-            const sql = "select d.did, d.name, d.location, d.speciality, d.timings, d.slots ,u.phone, u.email from doctors as d inner join users as u where d.did=? and u.uid=?";
+            const sql = "select d.did, d.name, d.location, d.speciality, d.timings, d.slots, d.myLocations, u.phone, u.email from doctors as d inner join users as u where d.did=? and u.uid=?";
 
             con.query(sql,[[doctorID], [doctorID]], function(err, result){
                 if(err){
