@@ -141,7 +141,7 @@ doctorRouter.patch("/updateDoctorDetails", authorizeDoctor, async(req, res) => {
 
         case "settings":
             const {slots, timings, location} = req.body.data
-            UpdateSettings(did, slots, JSON.stringify(timings), JSON.stringify(location), con, res)
+            UpdateSettings(did, slots, timings, location, con, res)
             break;
 
         case "privacy":
