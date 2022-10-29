@@ -19,7 +19,10 @@ doctorRouter.post("/getDoctorDetails", authorizeDoctor, async(req, res) => {
                     return res.json({success:false, msg:"Internal Server Error Occurred"})
                 }
                 else if(result.length>0){
-                    return res.json({success:true, data:result})
+                    const location = JSON.parse(result[0].location);
+                    const timings = JSON.parse(result[0].timings);
+                    let data = {...result[0], location:location, timings:timings}
+                    return res.json({success:true, data:data})
                 }
                 else{
                     return res.json({success:false, msg:"Your details are not available"})
@@ -138,7 +141,7 @@ doctorRouter.patch("/updateDoctorDetails", authorizeDoctor, async(req, res) => {
 
         case "settings":
             const {slots, timings, location} = req.body.data
-            UpdateSettings(did, slots, timings, location, con, res)
+            UpdateSettings(did, slots, JSON.stringify(timings), JSON.stringify(location), con, res)
             break;
 
         case "privacy":
