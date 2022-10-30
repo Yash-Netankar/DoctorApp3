@@ -26,7 +26,7 @@ doctorRouter.post("/getDoctorDetails", authorizeDoctor, async(req, res) => {
                     }
                     else{
                         let data = {...result[0], location:"", timings:""}
-                        return res.json({success:true, data:data})
+                        return res.json({success:true, data:data, msg:`Locations and timings are not specified by ${result[0].name}`})
                     }
                 }
                 else{
