@@ -31,7 +31,7 @@ doctorRouter.post("/getDoctorDetails", authorizeDoctor, async (req, res) => {
                         }
                     }
                     catch (error) {
-                        return res.json({ success: false, msg: "Docotor has submitted invalid data" })
+                        return res.json({ success: false, msg: "Docotor has submitted invalid data", err:error })
                     }
                 }
                 else {
